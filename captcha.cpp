@@ -2,69 +2,69 @@
 #include <string>
 #include <random>
 #include <algorithm>
-#include <cctype>
+#include <chrono>
 
 using namespace std;
 
-string generateCaptcha(int length = 8) {
-    string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    string lowercase = "abcdefghijklmnopqrstuvwxyz";
-    string digits = "0123456789";
-    string special = "@#$%&*";
+string generateCaptcha(int length, mt19937& gen) {
+    string characters =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz"
+        "0123456789"
+        "@#$%&*";
 
-    string all = uppercase + lowercase + digits + special;
+    uniform_int_distribution<int> dist(0, characters.length() - 1);
     string captcha;
 
-    random_device rd;
-    mt19937 gen(rd());
-
-    // Ensure at least one character from each category
-    uniform_int_distribution<int> upperDist(0, uppercase.size() - 1);
-    uniform_int_distribution<int> lowerDist(0, lowercase.size() - 1);
-    uniform_int_distribution<int> digitDist(0, digits.size() - 1);
-    uniform_int_distribution<int> specialDist(0, special.size() - 1);
-
-    captcha += uppercase[upperDist(gen)];
-    captcha += lowercase[lowerDist(gen)];
-    captcha += digits[digitDist(gen)];
-    captcha += special[specialDist(gen)];
-
-    // Fill remaining characters
-    uniform_int_distribution<int> allDist(0, all.size() - 1);
-
-    while (captcha.length() < length) {
-        captcha += all[allDist(gen)];
+    for (int i = 0; i < length; i++) {
+        captcha += characters[dist(gen)];
     }
 
-    // Shuffle CAPTCHA
-    shuffle(captcha.begin(), captcha.end(), gen);
+    bool hasUpper = false;
+    bool hasLower = false;
+    bool hasDigit = false;
+    bool hasSpecial = false;
+
+    for (char c : captcha) {
+        if (c >= 'A' && c <= 'Z')
+            hasUpper = true;
+        else if (c >= 'a' && c <= 'z')
+            hasLower = true;
+        else if (c >= '0' && c <= '9')
+            hasDigit = true;
+        else
+            hasSpecial = true;
+    }
+
+    if (!hasUpper || !hasLower || !hasDigit || !hasSpecial)
+        return generateCaptcha(length, gen);
 
     return captcha;
 }
 
 int main() {
+    unsigned seed = chrono::high_resolution_clock::now()
+        .time_since_epoch()
+        .count();
 
-    string captcha;
-    string userInput;
+    mt19937 gen(seed);
 
-    captcha = generateCaptcha(8);
+    string captcha = generateCaptcha(8, gen);
+    string input;
 
     cout << "============================\n";
-    cout << "       CAPTCHA VERIFICATION\n";
+    cout << "      CAPTCHA VERIFICATION\n";
     cout << "============================\n";
 
     cout << "CAPTCHA: " << captcha << endl;
 
     cout << "\nEnter CAPTCHA: ";
-    cin >> userInput;
+    cin >> input;
 
-    if (userInput == captcha) {
+    if (input == captcha)
         cout << "\nVerification Successful!" << endl;
-    }
-    else {
+    else
         cout << "\nVerification Failed!" << endl;
-        cout << "Correct CAPTCHA was: " << captcha << endl;
-    }
 
     return 0;
 }
